@@ -37,8 +37,8 @@ void TLV::TLV_Connection_Req::connect(boost::asio::io_context &context, const st
 
 void TLV::TLV_Connection_Req::write(boost::asio::io_context &context)
 {
-    boost::asio::async_write(*socket_, boost::asio::buffer(&std::get<0>(TLV_Manager::getInstance()->tlv_handler.handles).value,
-                                                           sizeof(std::get<0>(TLV_Manager::getInstance()->tlv_handler.handles).value)),
+    boost::asio::async_write(*socket_, boost::asio::buffer(&std::any_cast<TLV_Object<Login_Send_TLV>&>(TLV_Manager::getInstance()->tlv_handler.handles[0]).value,
+                                                           sizeof(std::any_cast<TLV_Object<Login_Send_TLV>&>(TLV_Manager::getInstance()->tlv_handler.handles[0]).value)),
                              [&, self = shared_from_this()](boost::system::error_code ec, std::size_t)
                              {
                                  if(ec)

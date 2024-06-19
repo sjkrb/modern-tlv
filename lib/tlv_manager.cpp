@@ -12,8 +12,8 @@ TLV::TLV_Manager *TLV::TLV_Manager::m_ptr {nullptr};
 TLV::TLV_Manager::TLV_Manager()
     :acceptor_(io_context_, tcp::endpoint(tcp::v4(), 1376))
 {
-    memcpy(std::get<0>(tlv_handler.handles).value.password, password, sizeof(password));
-    memcpy(std::get<0>(tlv_handler.handles).value.user_name, userName, sizeof(userName));
+    memcpy(std::any_cast<TLV_Object<Login_Send_TLV>&>(tlv_handler.handles[0]).value.password, password, sizeof(password));
+    memcpy(std::any_cast<TLV_Object<Login_Send_TLV>&>(tlv_handler.handles[0]).value.user_name, userName, sizeof(userName));
 
     start_accept();
 }
@@ -84,7 +84,17 @@ void AsyncReader::do_read()
                                             }
                                         };
 
-                                        std::apply([&](auto&&... args) {((check(args, base.type)), ...);},  TLV_Manager::getInstance()->tlv_handler.handles);
+                                        // std::apply([&](auto&&... args) {((check(args, base.type)), ...);},  TLV_Manager::getInstance()->tlv_handler.handles);
+
+                                        for (const auto& handle : TLV_Manager::getInstance()->tlv_handler.handles) {
+                                            if (handle.type() == typeid(base.type)) {
+                                                // auto& send_tlv = std::any_cast<const TLV_Object<Login_Send_TLV>&>(handle);
+                                                TLV_Manager::getInstance()->tlv_handler.any_handler.handle(handle, data_);
+
+                                                iter = data_.begin();
+                                            }
+                                        }
+
                                         self->do_read();
                                     }
 

@@ -3,6 +3,7 @@
 #include <boost/asio.hpp>
 #include <functional>
 #include <iostream>
+#include <typeindex>
 #include "tlv_connection_req.hpp"
 #include "base_tlv.hpp"
 
@@ -27,6 +28,8 @@ struct TLV_Object
     T value;
     std::function<void(const T&)> impl;
 
+
+
     void run()
     {
         std::invoke(impl, value);
@@ -35,26 +38,64 @@ struct TLV_Object
 
 class TLV_Manager;
 
+
+class AnyHandler {
+public:
+    template<typename T>
+    void registerHandler(std::function<void(const T&, const std::array<char, max_buffer_size> &_data)> handler) {
+        handlers[typeid(T)] = [handler](const std::any& a, const std::array<char, max_buffer_size> &_data) {
+            handler(std::any_cast<const T&>(a), _data);
+        };
+    }
+
+    void handle(const std::any& a, const std::array<char, max_buffer_size> &_data) const {
+        auto it = handlers.find(a.type());
+        if (it != handlers.end()) {
+            it->second(a, _data);
+        } else {
+            std::cerr << "No handler for type: " << a.type().name() << std::endl;
+        }
+    }
+
+private:
+    std::unordered_map<std::type_index, std::function<void(const std::any&, const std::array<char, max_buffer_size> &_data)>> handlers;
+};
+
 struct TLV_Handler
 {
     template <IS_TLV T>
     void add_tlv(T &input, std::function<void(const T&)> function)
     {
-        auto check = [&]<IS_TLV is_tlv>(TLV_Object<is_tlv> &Var){
-            if constexpr (std::is_same<is_tlv, T>::value)
-            {
-                Var.impl = function;
-            }
-        };
+        // auto check = [&]<IS_TLV is_tlv>(TLV_Object<is_tlv> &Var)
+        // {
+        //     if constexpr (std::is_same<is_tlv, T>::value)
+        //     {
+        //         Var.impl = function;
+        //     }
+        // };
 
-        std::apply([&](auto&&... args) {(check(args), ...);}, handles);
+        // handles = appendToTuple(std::move(handles), std::move(input));
+
+        // std::apply([&](auto&&... args) {(check(args), ...);}, handles);
+
+        TLV_Object<T> tlv_obj{input, function};
+        any_handler.registerHandler<TLV_Object<T>>([&tlv_obj](const TLV_Object<T>& obj,const std::array<char, max_buffer_size> &_data) {
+            memcpy(&tlv_obj.value, _data.begin(), sizeof(T));
+
+            tlv_obj.run();
+        });
+        handles.push_back(std::make_any<TLV_Object<T>>(tlv_obj));
     }
 
-    std::tuple<TLV_Object<Login_Send_TLV>,
-               TLV_Object<Login_rcv_TLV>,
-               TLV_Object<Test_TLV>>
+    std::vector<std::any> handles;
 
-            handles;
+    AnyHandler any_handler;
+
+    TLV_Handler()
+    {
+        handles.push_back(std::make_any<TLV_Object<Login_Send_TLV>>());
+        handles.push_back(std::make_any<TLV_Object<Login_rcv_TLV>>());
+    }
 };
 
 
@@ -99,7 +140,6 @@ public:
     void setBufferSize(const uint32_t &value);
 
     void appendSocket(std::shared_ptr<boost::asio::ip::tcp::socket> &&socket);
-
 
 
     TLV_Handler tlv_handler;
