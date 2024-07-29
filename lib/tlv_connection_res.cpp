@@ -11,6 +11,8 @@ TLV::TLV_Connection_Res::TLV_Connection_Res(boost::asio::io_context &context, tc
 
 void TLV_Connection_Res::do_read()
 {
+    PRINT_LOCATION(this, std::source_location::current());
+
     Login_Send_TLV send{};
     boost::asio::async_read(*socket_, boost::asio::buffer(&send, sizeof(Login_Send_TLV)), [&send, self = shared_from_this(), this](boost::system::error_code, std::size_t)
                             {
@@ -36,6 +38,8 @@ void TLV_Connection_Res::do_read()
 
 void TLV::TLV_Connection_Res::write(const Login_rcv_TLV &tlv)
 {
+    PRINT_LOCATION(this, std::source_location::current());
+
     boost::asio::async_write(*socket_, boost::asio::buffer(&tlv,sizeof(Login_rcv_TLV)),
                              [&, self = shared_from_this()](boost::system::error_code ec, std::size_t)
                              {

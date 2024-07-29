@@ -28,8 +28,6 @@ struct TLV_Object
     T value;
     std::function<void(const T&)> impl;
 
-
-
     void run()
     {
         std::invoke(impl, value);
@@ -66,6 +64,7 @@ struct TLV_Handler
     template <IS_TLV T>
     void add_tlv(T &input, std::function<void(const T&)> function)
     {
+
         // auto check = [&]<IS_TLV is_tlv>(TLV_Object<is_tlv> &Var)
         // {
         //     if constexpr (std::is_same<is_tlv, T>::value)
@@ -103,15 +102,19 @@ class TLV_Manager
 {
 public:
 
-    TLV_Manager();
+    TLV_Manager(boost::asio::io_context &_io_context, const uint16_t &port);
 
     template <IS_TLV Var>
     bool Send(const Var &value, std::string_view ip, const uint16_t &port)
     {
-        std::cout << "come in here \n";
+        PRINT_LOCATION(this, std::source_location::current());
+
+        std::cout << "send data size is : " << sizeof(value) << std::endl;
+
         boost::system::error_code ec;
 
         auto it = std::find_if(m_sockets.begin(), m_sockets.end(), [&](const std::shared_ptr<boost::asio::ip::tcp::socket> &sock){
+            std::cout << "in finding : remote : " << sock->remote_endpoint().address().to_string(ec) << " ip : " << ip << std::endl;
             return sock->remote_endpoint().address().to_string(ec) == ip;
         });
 
@@ -126,12 +129,13 @@ public:
         boost::asio::async_write(*(*it), boost::asio::buffer(&value,sizeof(value)),
                                  [&](boost::system::error_code ec, std::size_t)
                                  {
+                                     PRINT_LOCATION(this, std::source_location::current());
+
                                      if(ec)
                                      {
                                          std::cout << ec.message() << std::endl;
                                      }
                                  });
-
         return true;
     }
 
@@ -146,12 +150,14 @@ public:
     std::vector<boost::asio::ip::address> allowed_ips_;
     boost::asio::io_context io_context_;
 private:
+    TLV_Manager();
+
     std::vector<std::shared_ptr<boost::asio::ip::tcp::socket>> m_sockets;
 
     static TLV_Manager* m_ptr;
 
     void start_accept();
-
+    void start_accept(boost::asio::io_context &context);
 
     tcp::acceptor acceptor_;
     std::vector<uint8_t> buffer_;

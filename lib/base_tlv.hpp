@@ -6,7 +6,9 @@
 #include <functional>
 #include <boost/asio.hpp>
 #include <concepts>
+#include <iostream>
 #include <tuple>
+#include <source_location>
 
 /*
  *  base tlv class
@@ -23,6 +25,11 @@
 
 namespace TLV
 {
+
+constexpr void PRINT_LOCATION(const void *cls, const std::source_location &location)
+{
+    std::cout << cls <<'\t'<< location.function_name() << std::endl;
+}
 
 using boost::asio::ip::tcp;
 using tcpEndpoint = boost::asio::ip::tcp::endpoint;
@@ -53,6 +60,7 @@ struct Test_TLV : Base_TLV
     {
         type = Base_TLV::TLV_TYPE::test;
         length = sizeof(Test_TLV);
+        PRINT_LOCATION(this, std::source_location::current());
     }
 
     uint32_t value{11};
@@ -66,6 +74,7 @@ struct Example_TLV : Base_TLV
     {
         type = Base_TLV::TLV_TYPE::example;
         length = sizeof(Example_TLV);
+        PRINT_LOCATION(this, std::source_location::current());
     }
 
     uint32_t value{11};
@@ -79,6 +88,7 @@ struct Login_Send_TLV : Base_TLV
     {
         type = Base_TLV::TLV_TYPE::login_req;
         length = sizeof(Login_Send_TLV);
+        PRINT_LOCATION(this, std::source_location::current());
     }
 
     char user_name [16];
@@ -90,6 +100,7 @@ struct Login_rcv_TLV : Base_TLV
     Login_rcv_TLV()
     {
         type = Base_TLV::TLV_TYPE::login_res;
+        PRINT_LOCATION(this, std::source_location::current());
     }
 
     bool authenticationStatus{false};

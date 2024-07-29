@@ -13,6 +13,8 @@ TLV::TLV_Connection_Req::TLV_Connection_Req(boost::asio::io_context &context, co
 
 void TLV::TLV_Connection_Req::connect(boost::asio::io_context &context, const std::string &ip, const uint16_t &port)
 {
+    PRINT_LOCATION(this, std::source_location::current());
+
     socket_->async_connect(boost::asio::ip::tcp::endpoint(boost::asio::ip::address_v4::from_string(ip.c_str()), port),[&, self = shared_from_this()](const boost::system::error_code& error)
                            {
                                if(!error)
@@ -37,6 +39,8 @@ void TLV::TLV_Connection_Req::connect(boost::asio::io_context &context, const st
 
 void TLV::TLV_Connection_Req::write(boost::asio::io_context &context)
 {
+    PRINT_LOCATION(this, std::source_location::current());
+
     boost::asio::async_write(*socket_, boost::asio::buffer(&std::any_cast<TLV_Object<Login_Send_TLV>&>(TLV_Manager::getInstance()->tlv_handler.handles[0]).value,
                                                            sizeof(std::any_cast<TLV_Object<Login_Send_TLV>&>(TLV_Manager::getInstance()->tlv_handler.handles[0]).value)),
                              [&, self = shared_from_this()](boost::system::error_code ec, std::size_t)
